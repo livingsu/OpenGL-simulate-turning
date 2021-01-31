@@ -46,8 +46,8 @@ unsigned int ao[PBR_TYPES];
 
 
 //圆柱体信息,注意应该用double而不是float,避免精度不够导致除法出错
-const double cylinderRadius = 0.2f;
-const double cylinderLength = 2.0f;
+const double cylinderRadius = 0.4;
+const double cylinderLength = 1.6;
 const int angleStep = 2; //切分角度增量
 const double lengthStep = 0.001;  //切分长度增量
 const double radiusStep = 0.001; //半径增量
@@ -64,14 +64,14 @@ unsigned int vertexNum; //顶点数量
 //鼠标对应的裁剪坐标(标准化设备坐标,范围为-1~1),开始时刀尖在圆心处
 const double clipX0 = 0.62, clipY0 = -0.2;  //刀尖初始位置
 double clipX = clipX0, clipY = clipY0;  //刀尖新位置
- 
+
 
 //粒子系统
 struct Particle {
 	glm::vec3 position, velocity;
 	float life;
 
-	Particle():position(0.0f),velocity(0.0f),life(0.0f){}
+	Particle() :position(0.0f), velocity(0.0f), life(0.0f) {}
 };
 vector<Particle> particles;  //粒子数组
 const int PARTICLE_NUM = 1000; //粒子总数
@@ -111,7 +111,6 @@ int main()
 	// 创建,编译着色器
 	// -------------------------
 	Shader skyboxShader("skybox.vs", "skybox.fs");
-	Shader cylinderShader_phong("cylinder.vs", "cylinder_phong.fs");
 	Shader cylinderShader_pbr("cylinder.vs", "cylinder_pbr.fs");
 	Shader modelShader("model.vs", "model.fs");
 
@@ -146,23 +145,6 @@ int main()
 	// --------------------
 	skyboxShader.use();
 	skyboxShader.setInt("skybox", 0);
-
-	//冯氏光照模型
-	cylinderShader_phong.use();
-	cylinderShader_phong.setInt("material.diffuse", 0);
-
-	glm::vec3 lightColor(1.0f, 1.0f, 1.0f), cylinderColor(0.2, 0.4, 0.7);
-	glm::vec3 lightPos(4.0f, 1.0f, -1.0f);
-	cylinderShader_phong.setVec3("lightColor", lightColor);
-	//设置材质
-	cylinderShader_phong.setVec3("material.diffuse", cylinderColor);
-	cylinderShader_phong.setVec3("material.specular", lightColor);
-	cylinderShader_phong.setFloat("material.shininess", 32.0f);
-	//设置光照
-	cylinderShader_phong.setVec3("light.position", lightPos);
-	cylinderShader_phong.setVec3("light.ambient", glm::vec3(0.2f)); //降低环境光
-	cylinderShader_phong.setVec3("light.diffuse", glm::vec3(1.0f));
-	cylinderShader_phong.setVec3("light.specular", glm::vec3(0.5f));//降低镜面光
 
 	//pbr光照模型
 	cylinderShader_pbr.use();
@@ -217,35 +199,13 @@ int main()
 		// ---------
 		model = glm::mat4(1.0f);
 		view = camera.GetViewMatrix();
-		//projection = glm::perspective(glm::radians(camera.Zoom), (float)WIN_WIDTH / (float)WIN_HEIGHT, 0.1f, 100.0f);
-
 		float orthoSize = 1.0f;
 		projection = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, -orthoSize, orthoSize);
 
 
-		// 画圆柱体：冯氏模型
-		// --------------------
-		cylinderShader_phong.use();
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-1.5f, 0.0f, 0.0f));
-		//圆柱体旋转
-		model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.0f, 0.0f));
-		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		cylinderShader_phong.setMat4("model", model);
-		cylinderShader_phong.setMat4("view", view);
-		cylinderShader_phong.setMat4("projection", projection);
-		cylinderShader_phong.setVec3("viewPos", camera.Position);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, myTexture);
-		glBindVertexArray(cylinderVAO);
-		glDrawArrays(GL_TRIANGLES, 0, vertexNum);
-		glBindVertexArray(0);
-
-
-		
 		// 画圆柱体：pbr模型
 		// ------------------------
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		cylinderShader_pbr.use();
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(0.5f, 0.0f, 0.0f));
@@ -268,30 +228,15 @@ int main()
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, ao[PBR_type]);
 		glBindVertexArray(cylinderVAO);
-		//glDrawArrays(GL_TRIANGLES, 0, cylinderPoints);
 		glDrawElements(GL_TRIANGLES, vertexNum, GL_UNSIGNED_INT, 0);
-
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-		glBindBuffer(GL_ARRAY_BUFFER, cylinderVBO);
-		
-
 		glBindVertexArray(0);
-
-
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		//设置pbr的点光源位置(可为多个点光源,最多4个)
 		for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i) {
 			glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
 			newPos = lightPositions[i];
 			cylinderShader_pbr.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
 			cylinderShader_pbr.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
-
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, newPos);
-			model = glm::scale(model, glm::vec3(0.5f));
-			cylinderShader_pbr.setMat4("model", model);
-			glBindVertexArray(cylinderVAO);
-			glDrawArrays(GL_TRIANGLES, 0, vertexNum);
-			glBindVertexArray(0);
 		}
 
 
@@ -323,7 +268,7 @@ int main()
 
 
 		//更新旋转角
-		angle += 1.0f;
+		angle += 0.8f;
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -361,17 +306,15 @@ void processInput(GLFWwindow *window)
 	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
 		PBR_type = 2;
 	}
-
 }
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-
-	//if (width != 0 && height != 0) {  //避免窗口最小化带来的投影矩阵错误
+	if (width == 0 || height == 0) {
 		WIN_WIDTH = width;
 		WIN_HEIGHT = height;
-	//}
+	}
 	glViewport(0, 0, width, height);
 }
 
@@ -394,10 +337,13 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 		int zStart = (clipX0 - (clipX > newClipX ? clipX : newClipX)) / lengthStep; //圆柱体z轴方向下标
 		int zEnd = (clipX0 - (clipX > newClipX ? newClipX : clipX)) / lengthStep;
 		int zGap = zEnd - zStart;
-		int R_start = (clipY0 - (clipX > newClipX ? clipY : newClipY)) / radiusStep; //开始部分对应的半径是radiusStep的整数倍
-		int R_gap = (clipX > newClipX ? (clipY - newClipY) : (newClipY - clipY)) / radiusStep;
+		//开始部分对应的半径是radiusStep的整数倍
+		int R_start = (clipY0 - (clipX > newClipX ? clipY : newClipY)) / radiusStep;
+		int R_end = (clipY0 - (clipX > newClipX ? newClipY : clipY)) / radiusStep;
+		int R_gap = R_end - R_start;
 
-		if (zStart >= 0 && zEnd >= 0 && zGap >= 0) {
+		int stacks = cylinderLength / lengthStep;
+		if (zStart >= 0 && zStart <= stacks && zEnd >= 0 && zEnd <= stacks && zGap >= 0 && R_start >= 0) {  
 			bool isCut = false;
 			for (int i = zStart; i <= zEnd; ++i) {
 				int newRadius;
@@ -406,7 +352,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 				else
 					newRadius = R_start + R_gap * (float)(i - zStart) / (float)zGap;
 
-				if (newRadius < 0)newRadius = 0;
+				if (newRadius < 0) newRadius = 0;
 				if (radiusArray[i] > newRadius) {
 					isCut = true;
 					radiusArray[i] = newRadius;  //更新半径数组
@@ -414,24 +360,24 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 			}
 
 			//更新VBO缓冲区
-			//glBindBuffer(GL_ARRAY_BUFFER, cylinderVBO);
+			glBindBuffer(GL_ARRAY_BUFFER, cylinderVBO);
 			if (isCut) {
 				int slices = 360 / angleStep;
-				int stacks = cylinderLength / lengthStep;
-				for (int i = 0; i < slices; ++i) {
+				for (int i = 0; i <= slices; ++i) {
 					for (int j = zStart; j <= zEnd; ++j) {
-						int pointOffset = (i*stacks + j) * 3;
+						int pointOffset = (i*(stacks + 1) + j) * 3;
 						glm::vec3 newPoint = allPoints[pointOffset];
 						float alpha = i * angleStep;
 						float newR = radiusArray[j] * radiusStep;
 						newPoint.x = newR * (float)glm::cos(glm::radians(alpha));
 						newPoint.y = newR * (float)glm::sin(glm::radians(alpha));
-						glBufferSubData(GL_ARRAY_BUFFER, sizeof(float) * 3 * pointOffset, 2 * sizeof(float), &newPoint);
+						glBufferSubData(GL_ARRAY_BUFFER, 3 * sizeof(float) * pointOffset, 2 * sizeof(float), &newPoint);
+						allPoints[pointOffset] = newPoint;
 					}
 
 				}
 			}
-			//glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
 		}
 	}
 
@@ -521,15 +467,17 @@ void initCylinder() {
 		radiusArray.push_back(initRadius);
 	}
 
-	float R, alpha, x, y, z;
+	float R, alpha, x, y, z, texX, texY;
 
-	for (int i = 0; i < slices; i++) {
-		for (int j = 0; j < stacks; j++) {
+	for (int i = 0; i <= slices; i++) {
+		for (int j = 0; j <= stacks; j++) {
 			R = radiusArray[j] * radiusStep;
 			alpha = i * angleStep;
 			x = R * (float)glm::cos(glm::radians(alpha));
 			y = R * (float)glm::sin(glm::radians(alpha));
 			z = lengthStep * j;
+			texX = (float)i / (float)slices;  //纹理坐标
+			texY = (float)j / (float)stacks;
 
 			//顶点
 			glm::vec3 V(x, y, z);
@@ -537,16 +485,16 @@ void initCylinder() {
 			//侧面
 			allPoints.push_back(V);
 			allPoints.push_back(glm::vec3(V.x, V.y, 0.0f)); //法向量
-			allPoints.push_back(glm::vec3((float)i / (float)slices, (float)j / (float)stacks, 0.0f));//纹理坐标(是2D,但由于allPoints只能接受3D,故多出没用的一个float)
+			allPoints.push_back(glm::vec3(texX, texY, 0.0f));//纹理坐标(是2D,但由于allPoints只能接受3D,故多出没用的一个float)
 
 
 			//添加索引坐标
-			if (j < stacks - 1) {
+			if (i < slices && j < stacks) {
 				unsigned int leftDown, leftUp, rightDown, rightUp;
-				leftDown = i * stacks + j;
-				leftUp = i * stacks + (j + 1);
-				rightDown = ((i + 1) % slices) * stacks + j;
-				rightUp = ((i + 1) % slices) * stacks + (j + 1);
+				leftDown = i * (stacks + 1) + j;
+				leftUp = i * (stacks + 1) + (j + 1);
+				rightDown = (i + 1) * (stacks + 1) + j;
+				rightUp = (i + 1) * (stacks + 1) + (j + 1);
 
 				indices.push_back(leftDown);
 				indices.push_back(leftUp);
@@ -558,7 +506,7 @@ void initCylinder() {
 		}
 	}
 
-	vertexNum = 3 * allPoints.size();
+	vertexNum = indices.size();
 
 	unsigned int VAO, VBO, EBO;
 	glGenVertexArrays(1, &VAO);
@@ -566,9 +514,9 @@ void initCylinder() {
 	glGenBuffers(1, &EBO);
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*vertexNum, &allPoints[0], GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*allPoints.size() * 3, &allPoints[0], GL_STREAM_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(float)*indices.size(), &indices[0], GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*vertexNum, &indices[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(3 * sizeof(float)));
