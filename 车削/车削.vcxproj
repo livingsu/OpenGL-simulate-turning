@@ -137,20 +137,22 @@
     <ClInclude Include="mesh.h" />
     <ClInclude Include="model.h" />
     <ClInclude Include="shader.h" />
-    <ClInclude Include="skybox.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="background.fs" />
+    <None Include="background.vs" />
+    <None Include="bezier.fs" />
+    <None Include="bezier.vs" />
     <None Include="cylinder_pbr.fs" />
-    <None Include="cylinder_phong.fs" />
     <None Include="cylinder.vs" />
     <None Include="model.fs" />
     <None Include="model.vs" />
-    <None Include="skybox.fs" />
-    <None Include="skybox.vs" />
+    <None Include="particle.fs" />
+    <None Include="particle.vs" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="resources\textures\container.png" />
+    <Image Include="resources\textures\background.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -41,21 +41,9 @@
     <ClInclude Include="camera.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="skybox.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="skybox.fs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="skybox.vs">
-      <Filter>资源文件</Filter>
-    </None>
     <None Include="cylinder.vs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="cylinder_phong.fs">
       <Filter>资源文件</Filter>
     </None>
     <None Include="cylinder_pbr.fs">
@@ -67,9 +55,27 @@
     <None Include="model.fs">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="particle.vs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="particle.fs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="background.vs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="background.fs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="bezier.vs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="bezier.fs">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="resources\textures\container.png">
+    <Image Include="resources\textures\background.bmp">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>
