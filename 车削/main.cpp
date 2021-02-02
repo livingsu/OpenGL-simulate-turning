@@ -37,9 +37,9 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // pbr材质
-const unsigned int PBR_TYPES = 2;
+const unsigned int PBR_TYPES = 3;
 unsigned int PBR_type = 0;
-string PBRtypes[PBR_TYPES] = { "rusted_iron","wood" };
+string PBRtypes[PBR_TYPES] = { "rusted_iron","wood","Metal009" };
 unsigned int albedo[PBR_TYPES];
 unsigned int normal[PBR_TYPES];
 unsigned int metallic[PBR_TYPES];
@@ -89,7 +89,7 @@ bool isLeft = false;				//粒子x方向的速度是否向左
 
 //Bezier曲线
 vector<glm::vec2> BezierPoints;     //约束点
-vector<glm::vec2> BezierCurvePoints;//曲线点,固定为1001个
+vector<glm::vec2> BezierCurvePoints;//曲线点,固定为100001个
 
 unsigned int bezierVAO, bezierVBO, bezierCurveVAO, bezierCurveVBO;
 
@@ -140,7 +140,6 @@ int main()
 	// ----------------------------
 
 	initCylinder();
-	cout << "points:" << vertexNum << endl;
 
 	float backgroundVertex[] = {
 		-1.0f,-1.0f,  0.0f,0.0f,
@@ -230,7 +229,7 @@ int main()
 	//Bezier曲线点
 	glBindVertexArray(bezierCurveVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, bezierCurveVBO);
-	glBufferData(GL_ARRAY_BUFFER, 1001 * sizeof(glm::vec2), nullptr, GL_DYNAMIC_DRAW);   //bezier曲线点固定为1001个
+	glBufferData(GL_ARRAY_BUFFER, 100001 * sizeof(glm::vec2), nullptr, GL_DYNAMIC_DRAW);   //bezier曲线点固定为100001个
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	glBindVertexArray(0);
@@ -269,7 +268,11 @@ int main()
 	cylinderShader_pbr.setInt("metallicMap", 2);
 	cylinderShader_pbr.setInt("roughnessMap", 3);
 	cylinderShader_pbr.setInt("aoMap", 4);
-
+	cylinderShader_pbr.setInt("albedoMap1", 5);
+	cylinderShader_pbr.setInt("normalMap1", 6);
+	cylinderShader_pbr.setInt("metallicMap1", 7);
+	cylinderShader_pbr.setInt("roughnessMap1", 8);
+	cylinderShader_pbr.setInt("aoMap1", 9);
 
 	// pbr灯光
 	// ----------
@@ -340,6 +343,16 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, roughness[PBR_type]);
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, ao[PBR_type]);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, albedo[PBR_type+2]);
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_2D, normal[PBR_type+2]);
+		glActiveTexture(GL_TEXTURE7);
+		glBindTexture(GL_TEXTURE_2D, metallic[PBR_type+2]);
+		glActiveTexture(GL_TEXTURE8);
+		glBindTexture(GL_TEXTURE_2D, roughness[PBR_type+2]);
+		glActiveTexture(GL_TEXTURE9);
+		glBindTexture(GL_TEXTURE_2D, ao[PBR_type+2]);
 		glBindVertexArray(cylinderVAO);
 		glDrawElements(GL_TRIANGLES, vertexNum, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
@@ -359,7 +372,7 @@ int main()
 			particleShader.setMat4("view", view);
 			particleShader.setMat4("projection", projection);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, albedo[PBR_type]);
+			glBindTexture(GL_TEXTURE_2D, albedo[PBR_type+2]);
 			glBindVertexArray(particleVAO);
 			glBindBuffer(GL_ARRAY_BUFFER, modelMatrixVBO);
 
@@ -527,7 +540,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 					if (BezierPoints.size() == 4) {  //已满4个约束点,添加曲线点
 						float curveX, curveY;
 						glm::vec2 p0 = BezierPoints[0], p1 = BezierPoints[1], p2 = BezierPoints[2], p3 = BezierPoints[3];
-						for (float t = 0.0f; t < 1.0f; t += 0.001f) {
+						for (double t = 0.0f; t < 1.0f; t += 0.00001f) {  //使得曲线点之间的间距小于radiusArray,便于更新radiusMinArray数组
 							curveX = p0.x * glm::pow((1 - t), 3) + 3 * p1.x * t * glm::pow((1 - t), 2) + 3 * p2.x * t * t * (1 - t) + p3.x * pow(t, 3);
 							curveY = p0.y * glm::pow((1 - t), 3) + 3 * p1.y * t * glm::pow((1 - t), 2) + 3 * p2.y * t * t * (1 - t) + p3.y * pow(t, 3);
 							BezierCurvePoints.push_back(glm::vec2(curveX, curveY));
@@ -545,6 +558,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 						for (int i = 0; i <= curveSize - 1; ++i) {  //由于曲线点之间的间隔小于radiusStep,故直接对每个曲线点更新半径最小值即可
 							zIndex = (0.5f - BezierCurvePoints[i].x) / lengthStep;
 							newR = (-BezierCurvePoints[i].y) / radiusStep;
+							if (newR < 0)newR = 0;
 							if (zIndex >= 0 && newR >= 0) {
 								//更新radiusMinArray
 								radiusMinArray[zIndex] = newR;
@@ -631,7 +645,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 							float newR = radiusArray[j] * radiusStep;
 							newPoint.x = newR * (float)glm::cos(glm::radians(alpha));
 							newPoint.y = newR * (float)glm::sin(glm::radians(alpha));
+							float isCut = 1.0f;
 							glBufferSubData(GL_ARRAY_BUFFER, 3 * sizeof(float) * pointOffset, 2 * sizeof(float), &newPoint);
+							glBufferSubData(GL_ARRAY_BUFFER, 3 * sizeof(float) * pointOffset + 2 * sizeof(glm::vec3) +2* sizeof(float), sizeof(float), &isCut);
 							allPoints[pointOffset] = newPoint;
 						}
 
@@ -658,7 +674,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 // ---------------------------------------------------
 void loadPBRtextures()
 {
-	for (int type = 0; type < 1; ++type) {
+	for (int type = 0; type < PBR_TYPES; ++type) {
 		string folder = PBRtypes[type];
 		string filepath1 = "resources/textures/pbr/" + folder + "/albedo.png";
 		string filepath2 = "resources/textures/pbr/" + folder + "/normal.png";
@@ -747,7 +763,7 @@ void initCylinder() {
 			//侧面
 			allPoints.push_back(V);
 			allPoints.push_back(glm::vec3(V.x, V.y, 0.0f)); //法向量
-			allPoints.push_back(glm::vec3(texX, texY, 0.0f));//纹理坐标(是2D,但由于allPoints只能接受3D,故多出没用的一个float)
+			allPoints.push_back(glm::vec3(texX, texY, 0.0f));//2d纹理坐标+是否被切削(0为否,1为是)
 
 
 			//添加索引坐标
@@ -785,6 +801,8 @@ void initCylinder() {
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(8 * sizeof(float)));
+	glEnableVertexAttribArray(3);
 
 	cylinderVAO = VAO;
 	cylinderVBO = VBO;
